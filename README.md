@@ -1,11 +1,9 @@
 # Brown Family HQ
 
-Home-screen launcher for the Brown Family Life HQ dashboard, with the CRB family monogram as its app icon.
+The Brown family's life dashboard: money and bills, wealth, business ventures, goals and habits, and appointments.
 
-- Live page: https://raevenbrown.github.io/brown-family-hq/
-- Tapping the home-screen icon opens the Life HQ dashboard on Claude.
-- The dashboard's data stays in Claude; this repo holds only the launcher page and icons.
+- Live app: https://raevenbrown.github.io/brown-family-hq/
+- Add it to an iPhone home screen from Safari (Share → Add to Home Screen) to get the CRB icon.
+- Data lives in the Brown Family Supabase project. Only emails listed under "Family access" can sign in and see it.
 
-**Set up on iPhone:** open https://raevenbrown.github.io/brown-family-hq/?setup in Safari, tap Share, then Add to Home Screen.
-
-This repo is separate from The Brown Girls Creative Studio and shares no code with it.
+This repo is separate from The Brown Girls Creative Studio and shares no code or database with it. The only connection is a link on the Launchpad.
