@@ -1,7 +1,6 @@
 {
  "name": "Brown Family Life HQ",
  "short_name": "Brown HQ",
- "start_url": "./",
  "scope": "./",
  "display": "standalone",
  "background_color": "#111110",

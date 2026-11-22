@@ -718,7 +718,7 @@ setInterval(()=>{if(entered&&document.visibilityState==='visible')loadAll().catc
 let members=[];
 async function loadMembers(){const{data}=await sb.from('members').select('email,created_at').order('created_at');members=data||[];
  const me=(sessionUser&&sessionUser.email||'').toLowerCase();
- $('#memberList').innerHTML=members.map(m=>`<div class="item"><i class="dot"></i><div><div class="t">${esc(m.email)}${m.email.toLowerCase()===me?' <span class="pill">you</span>':''}</div></div>${m.email.toLowerCase()===me?'<span></span>':`<button class="x" data-unmember="${esc(m.email)}" aria-label="Remove access for ${esc(m.email)}">×</button>`}</div>`).join('')}
+ $('#memberList').innerHTML=members.map(m=>`<div class="item"><i class="dot"></i><div><div class="t">${m.email===FAMILY_EMAIL?'Home-screen link (opens without a password)':esc(m.email)}${m.email.toLowerCase()===me?' <span class="pill">you</span>':''}</div></div>${m.email.toLowerCase()===me?'<span></span>':`<button class="x" data-unmember="${esc(m.email)}" aria-label="Remove access for ${esc(m.email)}">×</button>`}</div>`).join('')}
 $('#memberForm').addEventListener('submit',async e=>{e.preventDefault();const em=$('#memberEmail').value.trim().toLowerCase();if(!em)return;
  const{error}=await sb.from('members').insert({email:em});if(error&&error.code!=='23505'){toast('Couldn’t add that email. Try again.');return}$('#memberEmail').value='';toast(em+' can now sign in');loadMembers()});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-unmember]');if(!b)return;if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Remove?';setTimeout(()=>{if(b.isConnected){b.classList.remove('armed');b.textContent='×'}},3000);return}
@@ -753,7 +753,12 @@ async function enter(session){if(!session){showForm();msg('');return}
  try{await loadAll()}catch(e){toast('Couldn’t load your data. Pull down to refresh.')}
  subscribe();startRealtime();setChip(false);loadMembers();gate.hidden=true}
 sb.auth.onAuthStateChange((ev,session)=>{if(ev==='PASSWORD_RECOVERY'){mode='reset';gate.hidden=false;$('#gateSub').textContent='Choose a new password.';showForm();msg('')}});
-(async()=>{try{const{data}=await sb.auth.getSession();if(location.hash.includes('type=recovery'))return;await enter(data.session)}catch(e){showForm();msg('Couldn’t reach the family database. Check your connection.',true)}})();
+const FAMILY_EMAIL='home@brownfamily.invalid';
+const homeKey=(()=>{try{return new URLSearchParams(location.search).get('k')}catch(e){return null}})();
+(async()=>{try{let{data}=await sb.auth.getSession();if(location.hash.includes('type=recovery'))return;
+ if(!data.session&&homeKey){msg('Opening…');const r=await sb.auth.signInWithPassword({email:FAMILY_EMAIL,password:homeKey});
+  if(r.error){showForm();msg('This home-screen link no longer works. Sign in below, or ask Raeven for a new link.',true);return}data=r.data}
+ await enter(data.session)}catch(e){showForm();msg('Couldn’t reach the family database. Check your connection.',true)}})();
 })();
 </script>
 </body>
