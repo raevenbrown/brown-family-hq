@@ -9,7 +9,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Brown HQ">
 <link rel="apple-touch-icon" href="hq-icon-180.png">
-<link rel="manifest" href="hq.webmanifest">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" type="image/png" href="hq-icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -206,7 +205,7 @@ details.fold[open]>summary{margin-bottom:16px}
   <div class="card">
     <div class="mark" role="img" aria-label="Brown family CRB monogram"></div>
     <h1>Brown Family HQ</h1>
-    <p class="sub" id="gateSub">Sign in once on this phone and it remembers you.</p>
+    <p class="sub" id="gateSub">Open Brown HQ from your private family link and it opens without a password.</p>
     <form id="authForm" autocomplete="on" hidden>
       <input class="f" id="aEmail" type="email" autocomplete="email" placeholder="Email" required>
       <input class="f" id="aPass" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" minlength="8" required>
@@ -735,7 +734,7 @@ function showForm(){af.hidden=false;$('#aToggle').hidden=false;$('#aForgot').hid
 $('#aToggle').addEventListener('click',()=>{mode=mode==='in'?'up':'in';msg('');showForm()});
 $('#aForgot').addEventListener('click',async()=>{const em=$('#aEmail').value.trim();if(!em){msg('Type your email first, then tap Forgot password.',true);return}
  const{error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});msg(error?'Couldn’t send the reset email. Try again in a minute.':'Check your email for a reset link. Open it on this phone.',!!error)});
-$('#aOut').addEventListener('click',async()=>{await sb.auth.signOut();sessionUser=null;mode='in';msg('');$('#gateSub').textContent='Sign in once on this phone and it remembers you.';showForm()});
+$('#aOut').addEventListener('click',async()=>{await sb.auth.signOut();sessionUser=null;mode='in';msg('');$('#gateSub').textContent='Open Brown HQ from your private family link and it opens without a password.';showForm()});
 af.addEventListener('submit',async e=>{e.preventDefault();const em=$('#aEmail').value.trim(),pw=$('#aPass').value;$('#aSubmit').disabled=true;msg('One moment…');
  try{
   if(mode==='reset'){const{error}=await sb.auth.updateUser({password:pw});if(error)throw error;mode='in';const{data}=await sb.auth.getSession();await enter(data.session);return}
@@ -754,7 +753,7 @@ async function enter(session){if(!session){showForm();msg('');return}
  subscribe();startRealtime();setChip(false);loadMembers();gate.hidden=true}
 sb.auth.onAuthStateChange((ev,session)=>{if(ev==='PASSWORD_RECOVERY'){mode='reset';gate.hidden=false;$('#gateSub').textContent='Choose a new password.';showForm();msg('')}});
 const FAMILY_EMAIL='home@brownfamily.invalid';
-const homeKey=(()=>{try{return new URLSearchParams(location.search).get('k')}catch(e){return null}})();
+const homeKey=(()=>{let k=null;try{k=new URLSearchParams(location.search).get('k')}catch(e){}try{if(k)localStorage.setItem('brown-hq-k',k);else k=localStorage.getItem('brown-hq-k')}catch(e){}return k})();
 (async()=>{try{let{data}=await sb.auth.getSession();if(location.hash.includes('type=recovery'))return;
  if(!data.session&&homeKey){msg('Opening…');const r=await sb.auth.signInWithPassword({email:FAMILY_EMAIL,password:homeKey});
   if(r.error){showForm();msg('This home-screen link no longer works. Sign in below, or ask Raeven for a new link.',true);return}data=r.data}
