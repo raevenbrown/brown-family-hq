@@ -107,7 +107,7 @@ main{padding-block:20px 48px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--c,var(--gold));flex:none}
 
 /* buttons & forms */
-.btn{min-height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-size:15px}
+.btn{min-height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:700;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-size:15px}
 .btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .btn.sm{min-height:34px;padding:0 10px;font-size:13.5px;border-radius:8px}
 .btn.armed{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -232,6 +232,7 @@ details.fold[open]>summary{margin-bottom:16px}
   <button class="tab" data-v="home">Today</button>
   <button class="tab" data-v="money">Money</button>
   <button class="tab" data-v="ventures">Business</button>
+  <button class="tab" data-v="jobs">Jobs</button>
   <button class="tab" data-v="goals">Goals &amp; health</button>
   <button class="tab" data-v="calendar">Calendar</button>
 </div></nav>
@@ -371,6 +372,25 @@ details.fold[open]>summary{margin-bottom:16px}
   </details>
 </section>
 
+<!-- JOBS -->
+<section class="view" id="v-jobs" hidden>
+  <div class="panel">
+    <div class="ph"><div><p class="eyebrow">Raeven · found for you every weekday morning</p><h2>Job matches</h2></div><div class="row" id="jobFilter"></div></div>
+    <p class="sub">Data science, AI and ML, university research and AI education. Atlanta area or remote. Full-time, part-time and fellowships.</p>
+    <div class="list" id="jobList"></div>
+  </div>
+  <details class="fold">
+    <summary><div><p class="eyebrow">Found one yourself?</p><h2>Add a job</h2></div></summary>
+    <form class="row" id="jobForm" autocomplete="off">
+      <input class="f w2" id="jbTitle" placeholder="Role" required maxlength="80">
+      <input class="f" id="jbCo" placeholder="Company or school" required maxlength="60">
+      <input class="f w2" id="jbUrl" type="url" placeholder="Link to the posting">
+      <input class="f" id="jbDue" type="date" aria-label="Deadline">
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+  </details>
+</section>
+
 <!-- GOALS -->
 <section class="view" id="v-goals" hidden>
   <div class="grid">
@@ -466,7 +486,7 @@ const HABITS={raeven:[['workout','Workout'],['walk','3-mile walk'],['protein','H
  cam:[['workout','Workout'],['cardio','Walk or cardio'],['eat','Stayed on eating plan'],['learn','Learn the trade 30 min'],['biz','Job search / business hour'],['nospend','No-spend day']]};
 const MANTRAS=['Build it together, stack it together.','Small wins every day become the legacy.','Pay the bills, pay yourselves, then grow it.','Discipline today, freedom tomorrow.','Two visions, one household, no limits.','Show up for the family, show up for the goals.','Every clip, episode and client counts.'];
 
-const S={income:[],bills:[],paid:{},holds:[],props:[],clips:[],goals:[],habits:{},appts:[],links:{},vent:{},gcal:null};
+const S={jobs:[],income:[],bills:[],paid:{},holds:[],props:[],clips:[],goals:[],habits:{},appts:[],links:{},vent:{},gcal:null};
 
 /* ---------- storage: the family's own Supabase database ---------- */
 const CFG={url:'https://kvrwhzcgiddzylbctyqy.supabase.co',key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2cndoemNnaWRkenlsYmN0eXF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNTU1MDcsImV4cCI6MjExMDkzMTUwN30.iPiQ2txQApjKCIbZB9QwInK5ZkJCPnKm-_jSPUFf-Sw'};
@@ -541,6 +561,7 @@ function renderFocus(){
  else if(todayAp.length){const a=todayAp[0];txt=`${a.title} today${a.time?' at '+fmtT(a.time):''}.`;go='calendar';btn='See the day'}
  else if(soon.length){const n=daysTo(dueDate(soon[0]));txt=`${soon[0].name} (${money(soon[0].amount)}) is due ${n===0?'today':'in '+n+' day'+(n>1?'s':'')}.`;go='money';btn='Open bills'}
  else if(g){txt=`Next goal: ${g.title}.`;go='goals';btn='Open goals'}
+ else if(S.jobs.some(j=>(j.status||'new')==='new')){const n=S.jobs.filter(j=>(j.status||'new')==='new').length;txt=`${n} new job match${n>1?'es':''} waiting for you.`;go='jobs';btn='See jobs'}
  else{txt='Nothing urgent. Pick one habit and one business move today.';go='goals';btn='Open habits'}
  $('#focus').innerHTML=`<div><span class="lbl">One thing first</span><p>${esc(txt)}</p></div><button class="btn primary" data-go="${go}">${btn}</button>`;
 }
@@ -637,12 +658,33 @@ function habitCols(){const h=S.habits[dkey(now())]||{};
  return [['raeven','Raeven','v2'],['cam','Cam','v5']].map(([w,n,c])=>{const mine=h[w]||{},done=HABITS[w].filter(x=>mine[x[0]]).length;
   return `<div class="hcol" style="--c:var(--${c})"><h3>${n}<small class="num">${done}/${HABITS[w].length}</small></h3>${HABITS[w].map(([k,l])=>`<button class="hb${mine[k]?' on':''}" data-habit="${w}.${k}" aria-pressed="${!!mine[k]}"><span class="box"></span>${esc(l)}</button>`).join('')}</div>`}).join('')}
 
+/* ---------- jobs ---------- */
+let jobFilter='new';
+const JF=[['new','New'],['saved','Saved'],['applied','Applied'],['pass','Passed']];
+function renderJobs(){
+ const st=j=>j.status||'new';
+ $('#jobFilter').innerHTML=JF.map(([k,l])=>{const n=S.jobs.filter(j=>st(j)===k).length;return `<button class="btn sm${k===jobFilter?' primary':''}" data-jf="${k}">${l}${n?' '+n:''}</button>`}).join('');
+ const list=S.jobs.filter(j=>st(j)===jobFilter).sort((a,b)=>(num(b.score)-num(a.score))||String(b.found||'').localeCompare(String(a.found||'')));
+ const tk=dkey(now());
+ $('#jobList').innerHTML=list.length?list.map(j=>{const due=j.deadline?daysTo(new Date(j.deadline+'T12:00')):null;
+  const dueTxt=j.deadline?(due<0?'<span class="pill bad">Deadline passed</span>':due<=7?`<span class="pill warn">Due ${short(j.deadline)}</span>`:`<span class="pill">Due ${short(j.deadline)}</span>`):'';
+  const btns=st(j)==='new'?`<button class="btn sm primary" data-jst="saved" data-jid="${esc(j.id)}">Save</button><button class="btn sm" data-jst="applied" data-jid="${esc(j.id)}">Applied</button><button class="btn sm" data-jst="pass" data-jid="${esc(j.id)}">Not for me</button>`
+   :st(j)==='saved'?`<button class="btn sm primary" data-jst="applied" data-jid="${esc(j.id)}">Applied</button><button class="btn sm" data-jst="pass" data-jid="${esc(j.id)}">Not for me</button>`
+   :`<button class="btn sm" data-jst="undo" data-jid="${esc(j.id)}">Move back to New</button>`;
+  return `<div class="goal" style="--c:var(--v2)"><div class="top"><b>${esc(j.title)}</b>${j.score?`<span class="pill good">${esc(j.score)}/10 fit</span>`:''}</div>
+  <div class="sub">${esc(j.company||'')}${j.location?' · '+esc(j.location):''}${j.type?' · '+esc(j.type):''}${j.pay?' · '+esc(j.pay):''}</div>
+  ${j.why?`<p style="font-size:15px">${esc(j.why)}</p>`:''}
+  <div class="row">${dueTxt}${j.url?`<a class="btn sm" href="${esc(j.url)}" target="_blank" rel="noopener">Open posting ↗</a>`:''}${btns}</div></div>`}).join('')
+  :`<p class="empty">${jobFilter==='new'?'No new matches right now. New ones arrive weekday mornings.':'Nothing here yet.'}</p>`;
+}
+$('#jobForm').addEventListener('submit',e=>{e.preventDefault();addDoc('jobs','jobs',{title:val('jbTitle'),company:val('jbCo'),url:val('jbUrl'),deadline:val('jbDue'),status:'saved',found:dkey(now()),why:'Added by you'},'Job saved');clear('jbTitle','jbCo','jbUrl','jbDue')});
+
 /* ---------- calendar ---------- */
 function renderCal(){const a=apptItems(30);$('#apptList').innerHTML=a.length?a.map(x=>apptRow(x,true)).join(''):'<p class="empty">No appointments in the next 30 days.</p>'}
 
 /* ---------- render + routing ---------- */
-function renderAll(){renderHome();renderMoney();renderWealth();renderVentures();renderGoals();renderCal()}
-const VIEWS=['home','money','ventures','goals','calendar'];
+function renderAll(){renderHome();renderJobs();renderMoney();renderWealth();renderVentures();renderGoals();renderCal()}
+const VIEWS=['home','money','ventures','jobs','goals','calendar'];
 function show(v){if(v==='wealth'){v='money';const f=$('#wealthFold');if(f)f.open=true}if(!VIEWS.includes(v))v='home';VIEWS.forEach(x=>$('#v-'+x).hidden=x!==v);$$('.tab').forEach(t=>{if(t.dataset.v===v)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current')})}
 $('#tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(!t)return;show(t.dataset.v);try{history.replaceState(null,'','#'+t.dataset.v)}catch(err){location.hash=t.dataset.v}window.scrollTo({top:0})});
 window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
@@ -665,6 +707,8 @@ document.addEventListener('click',e=>{
  const pb=e.target.closest('[data-paid]');if(pb){const id=pb.dataset.paid,m=thisM(),cur=Object.assign({},S.paid[m]||{});if(cur[id])delete cur[id];else cur[id]=Date.now();S.paid[m]=cur;renderAll();save('paid/'+m,cur);return}
  const hb=e.target.closest('[data-habit]');if(hb){const[w,k]=hb.dataset.habit.split('.'),dk=dkey(now()),day=JSON.parse(JSON.stringify(S.habits[dk]||{}));day[w]=day[w]||{};if(day[w][k])delete day[w][k];else day[w][k]=Date.now();S.habits[dk]=day;renderHome();renderGoals();save('habits/'+dk,day);return}
  const al=e.target.closest('[data-addlink]');if(al){openLinkForm(al.dataset.addlink);return}
+ const js=e.target.closest('[data-jst]');if(js){const j=S.jobs.find(x=>x.id===js.dataset.jid);if(j){j.status=js.dataset.jst==='undo'?'new':js.dataset.jst;renderJobs();renderFocus();save('jobs/'+j.id,strip(j));if(js.dataset.jst==='applied')toast('Marked applied. Good luck!')}return}
+ const jf=e.target.closest('[data-jf]');if(jf){jobFilter=jf.dataset.jf;renderJobs();return}
  const gf=e.target.closest('[data-gf]');if(gf){gFilter=gf.dataset.gf;renderGoals();return}
  const gd=e.target.closest('[data-gdone]');if(gd){const g=S.goals.find(x=>x.id===gd.dataset.gdone);if(g){g.done=!g.done;renderAll();save('goals/'+g.id,strip(g));if(g.done)toast('Goal complete. Proud of you two!')}return}
  const td=e.target.closest('[data-todel]');if(td){e.preventDefault();const v=td.dataset.todel,st=JSON.parse(JSON.stringify(S.vent[v]||{todos:[]}));st.todos.splice(+td.dataset.i,1);S.vent[v]=st;renderVentures();save('ventures/'+v,st);return}
@@ -692,7 +736,7 @@ $('#lkKey').addEventListener('change',()=>{$('#lkUrl').value=S.links[$('#lkKey')
 $('#linkForm').addEventListener('submit',e=>{e.preventDefault();let u=val('lkUrl');if(!/^https?:\/\//i.test(u)){toast('Links need to start with https://');return}S.links=Object.assign({},S.links,{[val('lkKey')]:u});renderAll();save('links/main',S.links);toast('Link saved');$('#linkForm').hidden=true});
 
 /* ---------- boot ---------- */
-head();renderAll();show(/^#(home|money|ventures|goals|calendar)$/.test(location.hash)?location.hash.slice(1):'home');
+head();renderAll();show(/^#(home|money|ventures|jobs|goals|calendar)$/.test(location.hash)?location.hash.slice(1):'home');
 function subscribe(){
  store.subCol('income',l=>{S.income=l;renderAll()});
  store.subCol('bills',l=>{S.bills=l;renderAll()});
@@ -703,6 +747,7 @@ function subscribe(){
  store.subCol('goals',l=>{S.goals=l;renderHome();renderGoals()});
  store.subCol('habits',l=>{S.habits={};l.forEach(x=>S.habits[x.id]=strip(x));renderHome();renderGoals()});
  store.subCol('appts',l=>{S.appts=l;renderHome();renderCal()});
+ store.subCol('jobs',l=>{S.jobs=l;renderJobs();renderFocus()});
  store.subCol('ventures',l=>{S.vent={};l.forEach(x=>S.vent[x.id]=strip(x));renderVentures()});
  store.subDoc('links/main',d=>{S.links=d||{};renderPad();renderVentures()});
 }
